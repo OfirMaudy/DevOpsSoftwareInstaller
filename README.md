@@ -1,6 +1,6 @@
 # Software Installer Application - Documentation
 
-**Version:** 1.0
+**Version:** 1.1
 
 ## Overview
 
@@ -60,7 +60,7 @@ The Software Installer is a comprehensive Bash-based interactive application des
 
 ## Supported Applications
 
-The application manages the following 10 tools:
+The application manages the following 18 tools:
 
 | Application | Purpose | Type |
 |-------------|---------|------|
@@ -71,9 +71,17 @@ The application manages the following 10 tools:
 | **minikube** | Local Kubernetes cluster | Container Orchestration |
 | **kubectl** | Kubernetes command-line tool | Container Orchestration |
 | **terraform** | Infrastructure as Code tool | DevOps |
+| **helm** | Kubernetes package manager | Container Orchestration |
 | **vscode** | Visual Studio Code editor | Development |
 | **grafana** | Monitoring & visualization platform | DevOps |
 | **nvim** | Neovim text editor | Development |
+| **python** | Python 3 with pip & venv | Development |
+| **flask** | Python web framework | Development |
+| **gunicorn** | Python WSGI HTTP server | Development |
+| **pytest** | Python testing framework | Development |
+| **flake8** | Python linting tool | Development |
+| **openssh-client** | SSH client for remote connections | Networking |
+| **openssh-server** | SSH server for incoming connections | Networking |
 
 ## Installation Instructions
 
@@ -112,13 +120,13 @@ The application manages the following 10 tools:
 ### Menu Options
 
 #### Option 1: Install Specific Software
-- Displays a checklist of all 10 applications
+- Displays a checklist of all 18 applications
 - Select the ones you want to install
 - The script will skip already-installed applications
 - Provides feedback on each installation
 
 #### Option 2: Install All Software
-- Installs all 10 applications without confirmation
+- Installs all 18 applications without confirmation
 - Automatically detects and skips installed applications
 - Perfect for initial environment setup
 
@@ -183,9 +191,11 @@ Safely removes applications with:
 
 Different applications use different installation methods:
 
-- **APT Packages:** git, docker, ansible, minikube, kubectl, nvim
-- **Third-party Repositories:** Jenkins, VS Code, Grafana, Terraform
+- **APT Packages:** git, ansible, nvim, openssh-client, openssh-server, python
+- **Third-party Repositories:** Docker (official repo), Jenkins, VS Code, Grafana, Terraform
 - **Direct Downloads:** Minikube, kubectl (latest versions)
+- **Install Script:** Helm (official get-helm-3 script)
+- **pip3 (Python packages):** flask, gunicorn, pytest, flake8
 
 ## Troubleshooting
 
@@ -284,5 +294,5 @@ Created as part of the Projects Portfolio collection.
 
 ---
 
-**Last Updated:** January 27, 2026
-**Version:** 1.0
+**Last Updated:** February 10, 2026
+**Version:** 1.1

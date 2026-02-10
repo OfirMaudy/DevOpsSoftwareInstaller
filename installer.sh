@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Software Installer Application
-# Version: 1.0
+# Version: 1.1
 # Description: An interactive tool to manage software installations, updates, and removals
 
 # Get the directory where the script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Application version
-APP_VERSION="1.0"
+APP_VERSION="1.1"
 if ! command -v whiptail &> /dev/null; then
     echo "whiptail is not installed. Installing..."
     sudo apt update && sudo apt install -y whiptail
@@ -23,7 +23,12 @@ install_software() {
             ;;
         docker)
             echo "Installing docker..."
-            sudo apt update && sudo apt install -y docker.io
+            sudo apt update && sudo apt install -y ca-certificates curl
+            sudo install -m 0755 -d /etc/apt/keyrings
+            sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+            sudo chmod a+r /etc/apt/keyrings/docker.asc
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+            sudo apt update && sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
             sudo systemctl start docker
             sudo systemctl enable docker
             ;;
@@ -33,8 +38,9 @@ install_software() {
             ;;
         jenkins)
             echo "Installing jenkins..."
-            wget -q -O - https://pkg.jenkins.io/debian-stable/jenkins.io.key | sudo apt-key add -
-            sudo sh -c 'echo deb http://pkg.jenkins.io/debian-stable binary/ > /etc/apt/sources.list.d/jenkins.list'
+            sudo apt update && sudo apt install -y fontconfig openjdk-17-jre
+            wget -O- https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo gpg --dearmor -o /usr/share/keyrings/jenkins-keyring.gpg
+            echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.gpg] https://pkg.jenkins.io/debian-stable binary/" | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
             sudo apt update && sudo apt install -y jenkins
             sudo systemctl start jenkins
             sudo systemctl enable jenkins
@@ -68,8 +74,8 @@ install_software() {
         grafana)
             echo "Installing grafana..."
             sudo apt install -y apt-transport-https software-properties-common wget
-            wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
-            echo "deb https://packages.grafana.com/oss/deb stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
+            wget -q -O - https://apt.grafana.com/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/grafana-keyring.gpg
+            echo "deb [signed-by=/usr/share/keyrings/grafana-keyring.gpg] https://apt.grafana.com stable main" | sudo tee /etc/apt/sources.list.d/grafana.list > /dev/null
             sudo apt update && sudo apt install -y grafana
             sudo systemctl start grafana-server
             sudo systemctl enable grafana-server
@@ -77,6 +83,52 @@ install_software() {
         nvim)
             echo "Installing nvim..."
             sudo apt update && sudo apt install -y neovim
+            ;;
+        helm)
+            echo "Installing helm..."
+            curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+            ;;
+        python)
+            echo "Installing python..."
+            sudo apt update && sudo apt install -y python3 python3-pip python3-venv
+            ;;
+        flask)
+            echo "Installing flask..."
+            if ! command -v pip3 &> /dev/null; then
+                sudo apt update && sudo apt install -y python3 python3-pip
+            fi
+            pip3 install flask
+            ;;
+        gunicorn)
+            echo "Installing gunicorn..."
+            if ! command -v pip3 &> /dev/null; then
+                sudo apt update && sudo apt install -y python3 python3-pip
+            fi
+            pip3 install gunicorn
+            ;;
+        pytest)
+            echo "Installing pytest..."
+            if ! command -v pip3 &> /dev/null; then
+                sudo apt update && sudo apt install -y python3 python3-pip
+            fi
+            pip3 install pytest
+            ;;
+        flake8)
+            echo "Installing flake8..."
+            if ! command -v pip3 &> /dev/null; then
+                sudo apt update && sudo apt install -y python3 python3-pip
+            fi
+            pip3 install flake8
+            ;;
+        openssh-client)
+            echo "Installing openssh-client..."
+            sudo apt update && sudo apt install -y openssh-client
+            ;;
+        openssh-server)
+            echo "Installing openssh-server..."
+            sudo apt update && sudo apt install -y openssh-server
+            sudo systemctl start ssh
+            sudo systemctl enable ssh
             ;;
         *)
             echo "Unknown software: $1"
@@ -97,6 +149,14 @@ is_installed() {
         vscode) command -v code >/dev/null 2>&1 ;;
         grafana) systemctl is-active grafana-server >/dev/null 2>&1 ;;
         nvim) command -v nvim >/dev/null 2>&1 ;;
+        helm) command -v helm >/dev/null 2>&1 ;;
+        python) command -v python3 >/dev/null 2>&1 ;;
+        flask) pip3 show flask >/dev/null 2>&1 ;;
+        gunicorn) pip3 show gunicorn >/dev/null 2>&1 ;;
+        pytest) pip3 show pytest >/dev/null 2>&1 ;;
+        flake8) pip3 show flake8 >/dev/null 2>&1 ;;
+        openssh-client) command -v ssh >/dev/null 2>&1 ;;
+        openssh-server) systemctl is-active ssh >/dev/null 2>&1 ;;
         *) false ;;
     esac
 }
@@ -114,6 +174,14 @@ get_version() {
         vscode) code --version 2>/dev/null | head -1 ;;
         grafana) curl -s http://localhost:3000/api/health 2>/dev/null | grep -o '"version":"[^"]*"' | cut -d'"' -f4 || echo "Running (version unavailable)" ;;
         nvim) nvim --version 2>/dev/null | head -1 | awk '{print $2}' ;;
+        helm) helm version --short 2>/dev/null ;;
+        python) python3 --version 2>/dev/null | awk '{print $2}' ;;
+        flask) pip3 show flask 2>/dev/null | grep Version | awk '{print $2}' ;;
+        gunicorn) pip3 show gunicorn 2>/dev/null | grep Version | awk '{print $2}' ;;
+        pytest) pytest --version 2>/dev/null | awk '{print $2}' ;;
+        flake8) flake8 --version 2>/dev/null | awk '{print $1}' ;;
+        openssh-client) ssh -V 2>&1 | awk '{print $1}' | sed 's/OpenSSH_//' ;;
+        openssh-server) sshd -V 2>&1 | head -1 | awk '{print $1}' | sed 's/OpenSSH_//' ;;
         *) echo "Unknown" ;;
     esac
 }
@@ -129,7 +197,9 @@ uninstall_software() {
             echo "Uninstalling docker..."
             sudo systemctl stop docker
             sudo systemctl disable docker
-            sudo apt remove -y docker.io
+            sudo apt remove -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+            sudo rm -f /etc/apt/sources.list.d/docker.list
+            sudo rm -f /etc/apt/keyrings/docker.asc
             ;;
         ansible)
             echo "Uninstalling ansible..."
@@ -141,6 +211,7 @@ uninstall_software() {
             sudo systemctl disable jenkins
             sudo apt remove -y jenkins
             sudo rm -f /etc/apt/sources.list.d/jenkins.list
+            sudo rm -f /usr/share/keyrings/jenkins-keyring.gpg
             ;;
         minikube)
             echo "Uninstalling minikube..."
@@ -166,10 +237,45 @@ uninstall_software() {
             sudo systemctl disable grafana-server
             sudo apt remove -y grafana
             sudo rm -f /etc/apt/sources.list.d/grafana.list
+            sudo rm -f /usr/share/keyrings/grafana-keyring.gpg
             ;;
         nvim)
             echo "Uninstalling nvim..."
             sudo apt remove -y neovim
+            ;;
+        helm)
+            echo "Uninstalling helm..."
+            sudo rm -f /usr/local/bin/helm
+            ;;
+        python)
+            echo "Uninstalling python..."
+            sudo apt remove -y python3 python3-pip python3-venv
+            ;;
+        flask)
+            echo "Uninstalling flask..."
+            pip3 uninstall -y flask
+            ;;
+        gunicorn)
+            echo "Uninstalling gunicorn..."
+            pip3 uninstall -y gunicorn
+            ;;
+        pytest)
+            echo "Uninstalling pytest..."
+            pip3 uninstall -y pytest
+            ;;
+        flake8)
+            echo "Uninstalling flake8..."
+            pip3 uninstall -y flake8
+            ;;
+        openssh-client)
+            echo "Uninstalling openssh-client..."
+            sudo apt remove -y openssh-client
+            ;;
+        openssh-server)
+            echo "Uninstalling openssh-server..."
+            sudo systemctl stop ssh
+            sudo systemctl disable ssh
+            sudo apt remove -y openssh-server
             ;;
         *)
             echo "Unknown software: $1"
@@ -194,7 +300,7 @@ while true; do
         1)
             # Checklist for specific software
             selections=$(whiptail --title "Select Software to Install" --checklist \
-            "Choose software to install:" 25 60 10 \
+            "Choose software to install:" 30 60 18 \
             "git" "Version control system" OFF \
             "docker" "Containerization platform" OFF \
             "ansible" "Automation tool" OFF \
@@ -202,9 +308,17 @@ while true; do
             "minikube" "Local Kubernetes" OFF \
             "kubectl" "Kubernetes CLI" OFF \
             "terraform" "Infrastructure as Code" OFF \
+            "helm" "Kubernetes package manager" OFF \
             "vscode" "Code editor" OFF \
             "grafana" "Monitoring dashboard" OFF \
-            "nvim" "Text editor" OFF 3>&1 1>&2 2>&3)
+            "nvim" "Text editor" OFF \
+            "python" "Python 3 with pip" OFF \
+            "flask" "Python web framework" OFF \
+            "gunicorn" "Python WSGI HTTP server" OFF \
+            "pytest" "Python testing framework" OFF \
+            "flake8" "Python linting tool" OFF \
+            "openssh-client" "SSH client" OFF \
+            "openssh-server" "SSH server" OFF 3>&1 1>&2 2>&3)
 
             # Check if selections is not empty
             if [ -n "$selections" ]; then
@@ -224,7 +338,7 @@ while true; do
             ;;
         2)
             # Install all
-            for sw in git docker ansible jenkins minikube kubectl terraform vscode grafana nvim; do
+            for sw in git docker ansible jenkins minikube kubectl terraform helm vscode grafana nvim python flask gunicorn pytest flake8 openssh-client openssh-server; do
                 if ! is_installed $sw; then
                     install_software $sw
                 else
@@ -235,7 +349,7 @@ while true; do
         3)
             # Check installed versions
             version_info="Installed Software Versions:\n\n"
-            for sw in git docker ansible jenkins minikube kubectl terraform vscode grafana nvim; do
+            for sw in git docker ansible jenkins minikube kubectl terraform helm vscode grafana nvim python flask gunicorn pytest flake8 openssh-client openssh-server; do
                 if is_installed $sw; then
                     version=$(get_version $sw)
                     version_info="$version_info$sw: $version\n"
@@ -245,7 +359,7 @@ while true; do
             if [ "$version_info" = "Installed Software Versions:\n\n" ]; then
                 whiptail --title "Installed Versions" --msgbox "No software is currently installed." 10 60
             else
-                whiptail --title "Installed Versions" --msgbox "$(echo -e "$version_info")" 15 60
+                whiptail --title "Installed Versions" --msgbox "$(echo -e "$version_info")" 25 60
             fi
             ;;
         4)
@@ -265,7 +379,7 @@ while true; do
         6)
             # Uninstall software
             selections=$(whiptail --title "Select Software to Uninstall" --checklist \
-            "Choose software to uninstall:" 25 60 10 \
+            "Choose software to uninstall:" 30 60 18 \
             "git" "Version control system" OFF \
             "docker" "Containerization platform" OFF \
             "ansible" "Automation tool" OFF \
@@ -273,9 +387,17 @@ while true; do
             "minikube" "Local Kubernetes" OFF \
             "kubectl" "Kubernetes CLI" OFF \
             "terraform" "Infrastructure as Code" OFF \
+            "helm" "Kubernetes package manager" OFF \
             "vscode" "Code editor" OFF \
             "grafana" "Monitoring dashboard" OFF \
-            "nvim" "Text editor" OFF 3>&1 1>&2 2>&3)
+            "nvim" "Text editor" OFF \
+            "python" "Python 3 with pip" OFF \
+            "flask" "Python web framework" OFF \
+            "gunicorn" "Python WSGI HTTP server" OFF \
+            "pytest" "Python testing framework" OFF \
+            "flake8" "Python linting tool" OFF \
+            "openssh-client" "SSH client" OFF \
+            "openssh-server" "SSH server" OFF 3>&1 1>&2 2>&3)
 
             # Check if selections is not empty
             if [ -n "$selections" ]; then
